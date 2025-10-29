@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLR(1) 文法生成器</title>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2c3e50;
+            --accent-color: #e74c3c;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --bg-light: #f9f9f9;
+            --border-color: #ddd;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f7fa;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        h1 {
+            color: var(--secondary-color);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .section {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+            padding: 25px;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        h2 {
+            color: var(--secondary-color);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--primary-color);
+        }
+        
+        textarea, input, select {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        
+        textarea {
+            min-height: 200px;
+            font-family: monospace;
+        }
+        
+        input {
+            font-family: monospace;
+        }
+        
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        button.secondary {
+            background: var(--secondary-color);
+        }
+        
+        button.secondary:hover {
+            background: #1a252f;
+        }
+        
+        button.danger {
+            background: var(--accent-color);
+        }
+        
+        button.danger:hover {
+            background: #c0392b;
+        }
+        
+        button.success {
+            background: var(--success-color);
+        }
+        
+        button.success:hover {
+            background: #219653;
+        }
+        
+        button.warning {
+            background: var(--warning-color);
+        }
+        
+        button.warning:hover {
+            background: #d35400;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        th {
+            background-color: var(--secondary-color);
+            color: white;
+            font-weight: 600;
+        }
+        
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        
+        .terminal {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        
+        .non-terminal {
+            color: var(--accent-color);
+            font-weight: bold;
+        }
+        
+        .item-state {
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            display: inline-flex;
+            width: 25px;
+            height: 25px;
+            align-items: center;
+            justify-content: center;
+            margin-right: 8px;
+            font-size: 0.8em;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+        
+        .status.error {
+            background-color: #ffeeee;
+            color: #e74c3c;
+            border: 1px solid #fadbd8;
+        }
+        
+        .status.success {
+            background-color: #eafaf1;
+            color: #27ae60;
+            border: 1px solid #d5f5e3;
+        }
+        
+        .status.info {
+            background-color: #e6f4ff;
+            color: var(--primary-color);
+            border: 1px solid #b9d6ff;
+        }
+        
+        .status.warning {
+            background-color: #fef9e7;
+            color: var(--warning-color);
+            border: 1px solid #fad7a0;
+        }
+        
+        .slr-table {
+            overflow-x: auto;
+        }
+        
+        .slr-table table {
+            min-width: 800px;
+        }
+        
+        .parse-table {
+            overflow-x: auto;
+        }
+        
+        .parse-table table {
+            min-width: 1000px;
+        }
+        
+        .parse-status {
+            margin-top: 20px;
+        }
+        
+        .parse-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 15px;
+        }
+        
+        .string-input {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .parse-stack {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background-color: #f1f8e9;
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 1.1em;
+            margin: 10px 0;
+        }
+        
+        .parse-stack-item {
+            padding: 5px 10px;
+            background-color: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .parse-success {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .parse-error {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+        
+        .parse-pointer {
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 0 5px;
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px 0;
+            color: #7f8c8d;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            
+            .string-input {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>SLR(1) 文法生成器</h1>
+            <p class="subtitle">解析上下文无关文法，构建项目集族，生成SLR(1)分析表</p>
+        </header>
+
+        <main>
+            <div class="content">
+                <div class="section">
+                    <h2>文法输入</h2>
+                    <p>在下方输入文法规则（每行一个规则）：</p>
+                    <textarea id="grammarInput" placeholder="S -> E
+E -> E + T | T
+T -> T * F | F
+F -> ( E ) | id">
+S -> E
+E -> E + T | T
+T -> T * F | F
+F -> ( E ) | id
+</textarea>
+                    
+                    <div class="btn-group">
+                        <button id="parseBtn" class="secondary">解析文法</button>
+                        <button id="exampleBtn">加载示例文法</button>
+                    </div>
+                    
+                    <div id="grammarStatus" class="status success">
+                        语法已准备就绪 - 输入合法的文法规则并点击"解析文法"
+                    </div>
+                    
+                    <h2>文法的基本属性</h2>
+                    <div id="grammarProperties">
+                        <table>
+                            <tr>
+                                <th>属性</th>
+                                <th>值</th>
+                            </tr>
+                            <tr>
+                                <td>开始符号</td>
+                                <td id="startSymbol">-</td>
+                            </tr>
+                            <tr>
+                                <td>非终结符</td>
+                                <td id="nonTerminals">-</td>
+                            </tr>
+                            <tr>
+                                <td>终结符</td>
+                                <td id="terminals">-</td>
+                            </tr>
+                            <tr>
+                                <td>产生式数量</td>
+                                <td id="productionCount">0</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h2>项目集族</h2>
+                    <div id="itemsetsContainer">
+                        <div id="noItemsetsMessage">请先解析文法以生成项目集族</div>
+                        <div id="itemsetsDisplay" style="display: none;"></div>
+                    </div>
+                    
+                    <h2>分析表控制</h2>
+                    <div class="btn-group">
+                        <button id="generateBtn">生成SLR分析表</button>
+                        <button id="saveBtn" class="secondary">保存分析表</button>
+                    </div>
+                    
+                    <div id="slrStatus" class="status">
+                        生成分析表后将在此显示状态
+                    </div>
+                </div>
+                
+                <div class="section full-width">
+                    <h2>SLR(1) 分析表</h2>
+                    <div id="slrTableContainer" class="slr-table">
+                        <p>分析表将在生成后显示在此区域</p>
+                        <div id="slrTableDisplay" style="display: none;"></div>
+                    </div>
+                </div>
+                
+                <!-- 新增的字符串分析模块 -->
+                <div class="section full-width">
+                    <h2>字符串分析</h2>
+                    <div id="stringAnalysisContainer">
+                        <p>输入要分析的字符串（使用空格分隔符号）：</p>
+                        <div class="string-input">
+                            <input type="text" id="inputString" placeholder="例如: id + id * id" value="id + id * id">
+                            <button id="analyzeBtn" class="success">分析字符串</button>
+                        </div>
+                        
+                        <div class="parse-actions">
+                            <button id="stepBtn" class="warning" disabled>单步分析</button>
+                            <button id="autoBtn" class="secondary" disabled>自动分析</button>
+                            <div id="stepControls" style="display: flex; gap: 10px; align-items: center;">
+                                <label for="stepDelay">步长延时 (ms):</label>
+                                <input type="number" id="stepDelay" min="100" max="3000" step="100" value="500" style="width: 100px;">
+                            </div>
+                        </div>
+                        
+                        <div id="parseStack" class="parse-stack" style="display: none;">
+                            <div class="parse-stack-item">状态栈:</div>
+                            <div id="stateStack"></div>
+                            <div class="parse-stack-item" style="margin-left: 15px;">符号栈:</div>
+                            <div id="symbolStack"></div>
+                            <div class="parse-stack-item" style="margin-left: 15px;">输入串:</div>
+                            <div id="inputStack"></div>
+                        </div>
+                        
+                        <div id="parseStatus" class="parse-status" style="display: none;"></div>
+                        
+                        <div id="parseResult" style="display: none; margin-top: 20px;">
+                            <h3>分析过程</h3>
+                            <div id="parseProcess" class="parse-table">
+                                <p>分析过程将在这里显示</p>
+                                <div id="parseProcessDisplay" style="display: none;">
+                                    <table>
+                                        <thead>
+                                            <tr>
+                                                <th>步骤</th>
+                                                <th>状态栈</th>
+                                                <th>符号栈</th>
+                                                <th>输入串</th>
+                                                <th>动作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="parseSteps">
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>SLR(1) 文法生成器 | 编译原理实验工具 | &copy; 2023</p>
+        </footer>
+    </div>
+
+    <script>
+        // SLR分析器核心类
+        class SLRGenerator {
+            constructor() {
+                this.grammar = null;
+                this.itemsets = [];
+                this.terminals = new Set();
+                this.nonTerminals = new Set();
+                this.firstSets = new Map();
+                this.followSets = new Map();
+                this.slrTable = [];
+                this.actionTable = {};
+                this.gotoTable = {};
+                this.productions = [];
+            }
+            
+            // 解析文法输入
+            parseGrammar(input) {
+                this.grammar = new Map();
+                this.terminals.clear();
+                this.nonTerminals.clear();
+                this.productions = [];
+                
+                const lines = input.split('\n').filter(line => line.trim().length > 0);
+                let startSymbol = null;
+                
+                for (const line of lines) {
+                    if (line.trim().length === 0) continue;
+                    
+                    const parts = line.split('->');
+                    if (parts.length < 2) {
+                        return { error: `无效产生式: ${line}` };
+                    }
+                    
+                    const lhs = parts[0].trim();
+                    
+                    // 确定起始符号（第一个出现的符号）
+                    if (startSymbol === null) {
+                        startSymbol = lhs;
+                        this.nonTerminals.add(lhs);
+                    }
+                    
+                    // 解析右侧表达式（处理"|"分隔符）
+                    const rightParts = parts[1].split('|');
+                    
+                    for (const part of rightParts) {
+                        const tokens = part.trim().split(/\s+/).filter(t => t.length > 0);
+                        
+                        // 添加到产生式列表
+                        this.productions.push({
+                            left: lhs,
+                            right: tokens
+                        });
+                        
+                        // 收集符号
+                        tokens.forEach(token => {
+                            if (token === 'ε') return;
+                            
+                            if (token.match(/^[a-z]$/) || token.match(/^id$|^num$/) || token.match(/^[+*()]$/)) {
+                                this.terminals.add(token);
+                            } else if (token.match(/^[A-Z]$/) || token.match(/^[A-Z]'?$/)) {
+                                this.nonTerminals.add(token);
+                            }
+                        });
+                    }
+                    
+                    // 添加到文法映射
+                    if (this.grammar.has(lhs)) {
+                        this.grammar.get(lhs).push(...rightParts.map(p => p.trim().split(/\s+/)));
+                    } else {
+                        this.grammar.set(lhs, rightParts.map(p => p.trim().split(/\s+/)));
+                    }
+                }
+                
+                // 如果没有文法规则，返回错误
+                if (this.grammar.size === 0) {
+                    return { error: "没有解析到有效的文法规则" };
+                }
+                
+                // 返回解析成功的文法信息
+                return { 
+                    success: true,
+                    startSymbol: startSymbol,
+                    terminals: Array.from(this.terminals),
+                    nonTerminals: Array.from(this.nonTerminals),
+                    productions: this.productions
+                };
+            }
+            
+            // 计算项目集族
+            calculateItemsets() {
+                this.itemsets = [];
+                this.closureSets = [];
+                this.gotoTransitions = [];
+                
+                // 创建初始项目集
+                const startSymbol = this.grammar.keys().next().value;
+                const startItem = this.createItem(startSymbol, 0, 0);
+                const itemset0 = this.closure([startItem]);
+                
+                // 添加初始项目集
+                this.itemsets.push(itemset0);
+                
+                // 项目集处理循环
+                for (let i = 0; i < this.itemsets.length; i++) {
+                    const itemset = this.itemsets[i];
+                    
+                    // 合并goto操作
+                    const transitions = {};
+                    
+                    // 遍历项目集中的每个项目
+                    for (const item of itemset) {
+                        const { lhs, prodIndex, dotPosition } = item;
+                        const production = this.grammar.get(lhs)[prodIndex];
+                        
+                        // 如果点在产生式末尾，跳过
+                        if (dotPosition >= production.length) continue;
+                        
+                        const nextSymbol = production[dotPosition];
+                        const nextItem = this.createItem(lhs, prodIndex, dotPosition + 1);
+                        
+                        // 计算下一项符号的闭包
+                        if (!transitions[nextSymbol]) {
+                            transitions[nextSymbol] = [];
+                        }
+                        
+                        const newItems = this.closure([nextItem]);
+                        transitions[nextSymbol].push(...newItems);
+                    }
+                    
+                    // 对每个转移符号进行处理
+                    for (const [symbol, newItems] of Object.entries(transitions)) {
+                        const uniqueNewItems = [];
+                        for (const item of newItems) {
+                            const isDuplicate = uniqueNewItems.some(existingItem => 
+                                existingItem.lhs === item.lhs && 
+                                existingItem.prodIndex === item.prodIndex && 
+                                existingItem.dotPosition === item.dotPosition);
+                            
+                            if (!isDuplicate) {
+                                uniqueNewItems.push(item);
+                            }
+                        }
+                        
+                        // 检查是否已有相同的项目集
+                        const existingIndex = this.itemsets.findIndex(set => 
+                            set.length === uniqueNewItems.length && 
+                            set.every((item, idx) => 
+                                item.lhs === uniqueNewItems[idx].lhs && 
+                                item.prodIndex === uniqueNewItems[idx].prodIndex && 
+                                item.dotPosition === uniqueNewItems[idx].dotPosition));
+                        
+                        let targetIndex;
+                        if (existingIndex !== -1) {
+                            targetIndex = existingIndex;
+                        } else {
+                            this.itemsets.push(uniqueNewItems);
+                            targetIndex = this.itemsets.length - 1;
+                        }
+                        
+                        // 记录转移关系
+                        this.gotoTransitions.push({
+                            from: i,
+                            symbol: symbol,
+                            to: targetIndex
+                        });
+                    }
+                }
+                
+                return {
+                    itemsets: this.itemsets,
+                    transitions: this.gotoTransitions
+                };
+            }
+            
+            // 计算闭包
+            closure(items) {
+                const closureSet = [...items];
+                const queue = [...items];
+                
+                while (queue.length > 0) {
+                    const currentItem = queue.shift();
+                    const { lhs, prodIndex, dotPosition } = currentItem;
+                    const production = this.grammar.get(lhs)[prodIndex];
+                    
+                    if (dotPosition < production.length) {
+                        const nextSymbol = production[dotPosition];
+                        
+                        if (this.grammar.has(nextSymbol)) {
+                            // 对于非终结符，添加其所有产生式
+                            const nextProductions = this.grammar.get(nextSymbol);
+                            
+                            for (let j = 0; j < nextProductions.length; j++) {
+                                const newItem = this.createItem(nextSymbol, j, 0);
+                                
+                                const itemExists = closureSet.some(item => 
+                                    item.lhs === newItem.lhs && 
+                                    item.prodIndex === newItem.prodIndex && 
+                                    item.dotPosition === newItem.dotPosition);
+                                
+                                if (!itemExists) {
+                                    closureSet.push(newItem);
+                                    queue.push(newItem);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return closureSet;
+            }
+            
+            // 创建项目结构
+            createItem(lhs, prodIndex, dotPosition) {
+                return { lhs, prodIndex, dotPosition };
+            }
+            
+            // 计算First集和Follow集
+            calculateFirstAndFollow() {
+                // 初始化First集
+                for (const nt of this.nonTerminals) {
+                    this.firstSets.set(nt, new Set());
+                }
+                
+                for (const t of this.terminals) {
+                    this.firstSets.set(t, new Set([t]));
+                }
+                
+                // 计算First集（迭代直到不再变化）
+                let changed;
+                do {
+                    changed = false;
+                    
+                    for (const [lhs, productions] of this.grammar.entries()) {
+                        const firstSet = this.firstSets.get(lhs);
+                        
+                        for (const production of productions) {
+                            let currentIndex = 0;
+                            
+                            while (currentIndex < production.length) {
+                                const symbol = production[currentIndex];
+                                const symbolFirstSet = this.firstSets.get(symbol) || new Set();
+                                
+                                // 添加除了ε之外的符号
+                                let hasEpsilon = false;
+                                for (const sym of symbolFirstSet) {
+                                    if (sym !== 'ε') {
+                                        if (!firstSet.has(sym)) {
+                                            firstSet.add(sym);
+                                            changed = true;
+                                        }
+                                    } else {
+                                        hasEpsilon = true;
+                                    }
+                                }
+                                
+                                if (!hasEpsilon) break;
+                                currentIndex++;
+                            }
+                            
+                            if (currentIndex === production.length) {
+                                if (!firstSet.has('ε')) {
+                                    firstSet.add('ε');
+                                    changed = true;
+                                }
+                            }
+                        }
+                    }
+                } while (changed);
+                
+                // 初始化Follow集
+                for (const nt of this.nonTerminals) {
+                    this.followSets.set(nt, new Set());
+                }
+                
+                // 添加结束符$到起始符号的Follow集
+                if (this.grammar.size > 0) {
+                    const startSymbol = this.grammar.keys().next().value;
+                    this.followSets.get(startSymbol).add('$');
+                }
+                
+                // 计算Follow集（迭代直到不再变化）
+                do {
+                    changed = false;
+                    
+                    for (const [lhs, productions] of this.grammar.entries()) {
+                        for (const production of productions) {
+                            for (let i = 0; i < production.length; i++) {
+                                const symbol = production[i];
+                                
+                                if (!this.nonTerminals.has(symbol)) continue;
+                                
+                                const followSet = this.followSets.get(symbol);
+                                
+                                if (i < production.length - 1) {
+                                    const nextSymbol = production[i+1];
+                                    
+                                    if (this.terminals.has(nextSymbol)) {
+                                        if (!followSet.has(nextSymbol)) {
+                                            followSet.add(nextSymbol);
+                                            changed = true;
+                                        }
+                                    } else {
+                                        const firstSet = this.firstSets.get(nextSymbol);
+                                        
+                                        for (const sym of firstSet) {
+                                            if (sym !== 'ε' && !followSet.has(sym)) {
+                                                followSet.add(sym);
+                                                changed = true;
+                                            }
+                                        }
+                                        
+                                        // 如果下一个符号包含ε，需要继续处理
+                                        if (firstSet.has('ε') && i+2 <= production.length) {
+                                            // 处理多个连续可能为ε的情况
+                                            let allEpsilon = true;
+                                            for (let j = i+1; j < production.length; j++) {
+                                                const current = production[j];
+                                                const currentFirst = this.firstSets.get(current);
+                                                if (!currentFirst.has('ε')) {
+                                                    allEpsilon = false;
+                                                    break;
+                                                }
+                                            }
+                                            
+                                            if (allEpsilon) {
+                                                const lhsFollow = this.followSets.get(lhs);
+                                                for (const sym of lhsFollow) {
+                                                    if (!followSet.has(sym)) {
+                                                        followSet.add(sym);
+                                                        changed = true;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    // 处理产生式末尾的情况
+                                    const lhsFollow = this.followSets.get(lhs);
+                                    for (const sym of lhsFollow) {
+                                        if (!followSet.has(sym)) {
+                                            followSet.add(sym);
+                                            changed = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } while (changed);
+                
+                return {
+                    firstSets: this.firstSets,
+                    followSets: this.followSets
+                };
+            }
+            
+            // 生成SLR分析表
+            generateSLRTable() {
+                this.slrTable = [];
+                this.actionTable = {};
+                this.gotoTable = {};
+                
+                const terminalList = Array.from(this.terminals).concat(['$']);
+                const nonTerminalList = Array.from(this.nonTerminals);
+                
+                // 初始化分析表（行数为状态数，列数为终结符数+非终结符数）
+                for (let i = 0; i < this.itemsets.length; i++) {
+                    this.slrTable[i] = {};
+                    
+                    // 创建内部存储结构的表
+                    this.actionTable[i] = {};
+                    this.gotoTable[i] = {};
+                    
+                    for (const t of terminalList) {
+                        this.slrTable[i][t] = '';
+                        this.actionTable[i][t] = null;
+                    }
+                    
+                    for (const nt of nonTerminalList) {
+                        this.slrTable[i][nt] = '';
+                        this.gotoTable[i][nt] = null;
+                    }
+                }
+                
+                // 填充转移部分（goto）
+                for (const trans of this.gotoTransitions) {
+                    const { from, symbol, to } = trans;
+                    
+                    if (this.nonTerminals.has(symbol)) {
+                        // 非终结符 - Goto操作
+                        this.slrTable[from][symbol] = to;
+                        this.gotoTable[from][symbol] = to;
+                    }
+                }
+                
+                // 填充动作部分（Action）
+                for (let state = 0; state < this.itemsets.length; state++) {
+                    const itemset = this.itemsets[state];
+                    
+                    for (const item of itemset) {
+                        const { lhs, prodIndex, dotPosition } = item;
+                        const production = this.grammar.get(lhs)[prodIndex];
+                        
+                        if (dotPosition < production.length) {
+                            const nextSymbol = production[dotPosition];
+                            
+                            if (this.terminals.has(nextSymbol)) {
+                                // 移进操作
+                                // 查找转移到新状态的边
+                                const trans = this.gotoTransitions.find(t => 
+                                    t.from === state && t.symbol === nextSymbol);
+                                
+                                if (trans) {
+                                    this.slrTable[state][nextSymbol] = `s${trans.to}`;
+                                    this.actionTable[state][nextSymbol] = {
+                                        type: 'shift',
+                                        target: trans.to
+                                    };
+                                }
+                            }
+                        } else {
+                            // 规约操作 - 点在末尾
+                            // 对于SLR(1)，使用Follow集
+                            const followSet = this.followSets.get(lhs);
+                            
+                            // 对每个Follow集中的终结符添加规约动作
+                            for (const t of followSet) {
+                                if (t === 'ε') continue;
+                                
+                                const action = `r${prodIndex}`;
+                                
+                                // 如果没有冲突，直接添加
+                                if (!this.slrTable[state][t] || this.slrTable[state][t] === action) {
+                                    this.slrTable[state][t] = action;
+                                    this.actionTable[state][t] = {
+                                        type: 'reduce',
+                                        productionIndex: prodIndex
+                                    };
+                                } else {
+                                    // 检测到冲突
+                                    this.slrTable[state][t] = `冲突: ${this.slrTable[state][t]}, ${action}`;
+                                }
+                            }
+                            
+                            // 特殊处理 - 起始产生式，接受动作
+                            if (lhs === this.grammar.keys().next().value && prodIndex === 0) {
+                                this.slrTable[state]['$'] = 'acc';
+                                this.actionTable[state]['$'] = {
+                                    type: 'accept'
+                                };
+                            }
+                        }
+                    }
+                }
+                
+                return {
+                    table: this.slrTable,
+                    terminals: terminalList,
+                    nonTerminals: nonTerminalList
+                };
+            }
+            
+            // 分析输入字符串
+            parseInput(inputTokens) {
+                // 添加结束符
+                inputTokens.push('$');
+                
+                const stack = ['$', 0]; // 符号栈：初始状态为0
+                const steps = [];      // 分析步骤
+                let stepCount = 1;
+                let error = false;
+                let accepted = false;
+                
+                // 初始化步骤数据
+                steps.push({
+                    step: stepCount++,
+                    stack: stack.join(' '),
+                    symbols: '',
+                    input: inputTokens.join(' '),
+                    action: '初始化'
+                });
+                
+                let currentPosition = 0;
+                
+                while (currentPosition < inputTokens.length && !error && !accepted) {
+                    const currentToken = inputTokens[currentPosition];
+                    const currentState = stack[stack.length - 1];
+                    
+                    if (!this.actionTable[currentState] || !this.actionTable[currentState][currentToken]) {
+                        error = true;
+                        steps.push({
+                            step: stepCount++,
+                            stack: stack.join(' '),
+                            symbols: '',
+                            input: inputTokens.slice(currentPosition).join(' '),
+                            action: `错误：状态 ${currentState} 没有针对 ${currentToken} 的操作`
+                        });
+                        break;
+                    }
+                    
+                    const action = this.actionTable[currentState][currentToken];
+                    
+                    if (action.type === 'shift') {
+                        // 移进操作
+                        const newState = action.target;
+                        stack.push(currentToken, newState);
+                        steps.push({
+                            step: stepCount++,
+                            stack: stack.join(' '),
+                            symbols: stack.filter((_, i) => i % 2 === 0).join(' '),
+                            input: inputTokens.slice(currentPosition).join(' '),
+                            action: `移进 ${currentToken} 并转到状态 ${newState}`
+                        });
+                        currentPosition++;
+                    } 
+                    else if (action.type === 'reduce') {
+                        // 归约操作
+                        const productionIndex = action.productionIndex;
+                        const production = this.productions[productionIndex];
+                        const numSymbols = production.right.length;
+                        
+                        // 弹出产生式右侧的符号和状态
+                        const popCount = numSymbols * 2;
+                        stack.splice(stack.length - popCount, popCount);
+                        
+                        // 弹出后，栈顶是新的状态
+                        const prevState = stack[stack.length - 1];
+                        
+                        // 压入产生式左侧的非终结符
+                        const lhs = production.left;
+                        stack.push(lhs);
+                        
+                        // 查找新的状态
+                        let newState;
+                        if (this.gotoTable[prevState] && this.gotoTable[prevState][lhs] !== null) {
+                            newState = this.gotoTable[prevState][lhs];
+                            stack.push(newState);
+                            
+                            steps.push({
+                                step: stepCount++,
+                                stack: stack.join(' '),
+                                symbols: stack.filter((_, i) => i % 2 === 0).join(' '),
+                                input: inputTokens.slice(currentPosition).join(' '),
+                                action: `归约（${lhs} → ${production.right.join(' ')}）并转到状态 ${newState}`
+                            });
+                        } else {
+                            error = true;
+                            steps.push({
+                                step: stepCount++,
+                                stack: stack.join(' '),
+                                symbols: stack.filter((_, i) => i % 2 === 0).join(' '),
+                                input: inputTokens.slice(currentPosition).join(' '),
+                                action: `错误：状态 ${prevState} 没有针对 ${lhs} 的转移`
+                            });
+                            break;
+                        }
+                    } 
+                    else if (action.type === 'accept') {
+                        // 接受输入
+                        accepted = true;
+                        steps.push({
+                            step: stepCount++,
+                            stack: stack.join(' '),
+                            symbols: stack.filter((_, i) => i % 2 === 0).join(' '),
+                            input: inputTokens.slice(currentPosition).join(' '),
+                            action: `接受输入：分析成功！`
+                        });
+                    } 
+                    else {
+                        error = true;
+                        steps.push({
+                            step: stepCount++,
+                            stack: stack.join(' '),
+                            symbols: stack.filter((_, i) => i % 2 === 0).join(' '),
+                            input: inputTokens.slice(currentPosition).join(' '),
+                            action: `未知操作类型: ${action.type}`
+                        });
+                    }
+                }
+                
+                return {
+                    success: !error && accepted,
+                    steps: steps,
+                    result: accepted ? '接受输入：语法正确' : '错误：语法分析失败'
+                };
+            }
+        }
+
+        // DOM就绪后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            const slrGenerator = new SLRGenerator();
+            const grammarInput = document.getElementById('grammarInput');
+            const parseBtn = document.getElementById('parseBtn');
+            const exampleBtn = document.getElementById('exampleBtn');
+            const generateBtn = document.getElementById('generateBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const stepBtn = document.getElementById('stepBtn');
+            const autoBtn = document.getElementById('autoBtn');
+            const inputString = document.getElementById('inputString');
+            const parseStatus = document.getElementById('parseStatus');
+            const parseStack = document.getElementById('parseStack');
+            const stateStack = document.getElementById('stateStack');
+            const symbolStack = document.getElementById('symbolStack');
+            const inputStack = document.getElementById('inputStack');
+            const parseSteps = document.getElementById('parseSteps');
+            const parseResult = document.getElementById('parseResult');
+            const stepDelay = document.getElementById('stepDelay');
+            
+            // 当前分析状态
+            let currentParse = {
+                tokens: [],
+                currentPosition: 0,
+                stack: ['$', 0],
+                steps: [],
+                stepCount: 1,
+                isCompleted: false,
+                isSuccess: false
+            };
+            
+            // 加载示例文法
+            exampleBtn.addEventListener('click', () => {
+                grammarInput.value = `S -> E
+E -> E + T | T
+T -> T * F | F
+F -> ( E ) | id`;
+                
+                grammarStatus.classList.remove('error');
+                grammarStatus.classList.add('success');
+                grammarStatus.textContent = '示例文法已加载';
+            });
+            
+            // 解析文法
+            parseBtn.addEventListener('click', () => {
+                const input = grammarInput.value;
+                if (!input.trim()) {
+                    showStatus('请输入文法规则', 'error');
+                    return;
+                }
+                
+                const result = slrGenerator.parseGrammar(input);
+                
+                if (result.error) {
+                    showStatus(`解析错误: ${result.error}`, 'error');
+                    return;
+                }
+                
+                // 更新UI显示文法信息
+                document.getElementById('startSymbol').textContent = result.startSymbol;
+                document.getElementById('nonTerminals').textContent = result.nonTerminals.join(', ');
+                document.getElementById('terminals').textContent = result.terminals.join(', ');
+                document.getElementById('productionCount').textContent = Array.from(result.productions.values()).flat().length;
+                
+                // 计算项目集族
+                const itemsetsResult = slrGenerator.calculateItemsets();
+                
+                // 显示项目集族
+                displayItemsets(itemsetsResult.itemsets);
+                
+                // 计算FIRST和FOLLOW集
+                slrGenerator.calculateFirstAndFollow();
+                
+                showStatus('文法解析成功！项目集族已生成', 'success');
+                
+                // 启用生成分析表按钮
+                generateBtn.disabled = false;
+            });
+            
+            // 生成SLR分析表
+            generateBtn.addEventListener('click', () => {
+                const tableResult = slrGenerator.generateSLRTable();
+                displaySLRTable(tableResult.table, tableResult.terminals, tableResult.nonTerminals);
+                
+                const slrStatus = document.getElementById('slrStatus');
+                slrStatus.textContent = 'SLR(1)分析表已成功生成！现在可以分析字符串。';
+                slrStatus.className = 'status success';
+                
+                // 启用分析字符串按钮
+                analyzeBtn.disabled = false;
+            });
+            
+            // 保存分析表
+            saveBtn.addEventListener('click', () => {
+                alert('分析表保存功能需结合后端实现');
+            });
+            
+            // 分析字符串
+            analyzeBtn.addEventListener('click', () => {
+                const input = inputString.value.trim();
+                if (!input) {
+                    alert('请输入要分析的字符串');
+                    return;
+                }
+                
+                // 分割字符串为符号序列
+                const tokens = input.split(/\s+/);
+                if (tokens.length === 0) {
+                    alert('无效的输入字符串');
+                    return;
+                }
+                
+                // 分析输入串
+                const result = slrGenerator.parseInput([...tokens]);
+                
+                // 显示分析结果
+                displayParseResult(result);
+                
+                // 启用步进按钮
+                stepBtn.disabled = false;
+                autoBtn.disabled = false;
+            });
+            
+            // 显示状态信息
+            function showStatus(message, type) {
+                const statusElement = document.getElementById('grammarStatus');
+                statusElement.textContent = message;
+                statusElement.className = `status ${type}`;
+            }
+            
+            // 显示项目集族
+            function displayItemsets(itemsets) {
+                const itemsetsDisplay = document.getElementById('itemsetsDisplay');
+                const noItemsetsMessage = document.getElementById('noItemsetsMessage');
+                
+                itemsetsDisplay.innerHTML = '';
+                itemsetsDisplay.style.display = 'block';
+                noItemsetsMessage.style.display = 'none';
+                
+                itemsets.forEach((itemset, state) => {
+                    const itemsetDiv = document.createElement('div');
+                    itemsetDiv.classList.add('itemset');
+                    
+                    const header = document.createElement('h3');
+                    header.innerHTML = `<span class="item-state">${state}</span> 项目集 ${state}`;
+                    itemsetDiv.appendChild(header);
+                    
+                    const list = document.createElement('ul');
+                    list.style.listStyleType = 'none';
+                    list.style.paddingLeft = '0';
+                    
+                    itemset.forEach(item => {
+                        const li = document.createElement('li');
+                        li.style.marginBottom = '8px';
+                        li.style.padding = '5px';
+                        li.style.borderLeft = '3px solid var(--primary-color)';
+                        li.style.backgroundColor = '#f8f9fa';
+                        
+                        const { lhs, prodIndex, dotPosition } = item;
+                        const production = slrGenerator.grammar.get(lhs)[prodIndex];
+                        
+                        let productionStr = `${lhs} → `;
+                        production.forEach((symbol, index) => {
+                            if (index === dotPosition) {
+                                productionStr += '• ';
+                            }
+                            
+                            if (slrGenerator.terminals.has(symbol)) {
+                                productionStr += `<span class="terminal">${symbol}</span> `;
+                            } else {
+                                productionStr += `<span class="non-terminal">${symbol}</span> `;
+                            }
+                        });
+                        
+                        if (dotPosition >= production.length) {
+                            productionStr += '•';
+                        }
+                        
+                        li.innerHTML = productionStr;
+                        list.appendChild(li);
+                    });
+                    
+                    itemsetDiv.appendChild(list);
+                    itemsetsDisplay.appendChild(itemsetDiv);
+                });
+            }
+            
+            // 显示SLR分析表
+            function displaySLRTable(table, terminals, nonTerminals) {
+                const tableDisplay = document.getElementById('slrTableDisplay');
+                const slrTableContainer = document.getElementById('slrTableContainer');
+                tableDisplay.innerHTML = '';
+                tableDisplay.style.display = 'block';
+                
+                const title = document.createElement('h3');
+                title.textContent = 'SLR(1)分析表';
+                tableDisplay.appendChild(title);
+                
+                const tableElement = document.createElement('table');
+                const headerRow = document.createElement('tr');
+                
+                // 添加表头
+                const stateHeader = document.createElement('th');
+                stateHeader.textContent = '状态';
+                headerRow.appendChild(stateHeader);
+                
+                // 添加终结符列
+                terminals.forEach(t => {
+                    const th = document.createElement('th');
+                    th.textContent = t;
+                    headerRow.appendChild(th);
+                });
+                
+                // 添加非终结符列
+                nonTerminals.forEach(nt => {
+                    const th = document.createElement('th');
+                    th.textContent = nt;
+                    headerRow.appendChild(th);
+                });
+                
+                tableElement.appendChild(headerRow);
+                
+                // 添加表格行
+                table.forEach((row, state) => {
+                    const tr = document.createElement('tr');
+                    
+                    // 状态列
+                    const stateCell = document.createElement('td');
+                    stateCell.textContent = state;
+                    stateCell.style.fontWeight = 'bold';
+                    tr.appendChild(stateCell);
+                    
+                    // Action部分（终结符）
+                    terminals.forEach(t => {
+                        const td = document.createElement('td');
+                        td.textContent = row[t] || '';
+                        tr.appendChild(td);
+                    });
+                    
+                    // Goto部分（非终结符）
+                    nonTerminals.forEach(nt => {
+                        const td = document.createElement('td');
+                        td.textContent = row[nt] || '';
+                        tr.appendChild(td);
+                    });
+                    
+                    tableElement.appendChild(tr);
+                });
+                
+                tableDisplay.appendChild(tableElement);
+                slrTableContainer.querySelector('p').style.display = 'none';
+            }
+            
+            // 显示分析结果
+            function displayParseResult(result) {
+                // 显示状态栈和输入串
+                parseStatus.innerHTML = '';
+                parseStack.style.display = 'flex';
+                stateStack.textContent = '[0]';
+                symbolStack.textContent = '$';
+                inputStack.textContent = `${result.steps[1].input}`;
+                
+                if (result.success) {
+                    parseStatus.innerHTML = `<div class="status parse-success">✓ ${result.result}</div>`;
+                } else {
+                    parseStatus.innerHTML = `<div class="status parse-error">✗ ${result.result}</div>`;
+                }
+                
+                // 显示分析步骤
+                parseResult.style.display = 'block';
+                const processDisplay = document.getElementById('parseProcessDisplay');
+                processDisplay.style.display = 'block';
+                parseSteps.innerHTML = '';
+                
+                result.steps.forEach(step => {
+                    const tr = document.createElement('tr');
+                    
+                    // 步骤编号
+                    const stepCell = document.createElement('td');
+                    stepCell.textContent = step.step;
+                    stepCell.style.fontWeight = 'bold';
+                    tr.appendChild(stepCell);
+                    
+                    // 状态栈
+                    const stackCell = document.createElement('td');
+                    stackCell.textContent = step.stack || '';
+                    tr.appendChild(stackCell);
+                    
+                    // 符号栈
+                    const symbolsCell = document.createElement('td');
+                    symbolsCell.textContent = step.symbols || '';
+                    tr.appendChild(symbolsCell);
+                    
+                    // 输入串
+                    const inputCell = document.createElement('td');
+                    inputCell.textContent = step.input || '';
+                    inputCell.style.fontFamily = 'monospace';
+                    tr.appendChild(inputCell);
+                    
+                    // 动作
+                    const actionCell = document.createElement('td');
+                    actionCell.textContent = step.action || '';
+                    if (step.action.includes('移进')) {
+                        actionCell.style.color = '#2980b9';
+                        actionCell.style.fontWeight = 'bold';
+                    } else if (step.action.includes('归约')) {
+                        actionCell.style.color = '#e74c3c';
+                        actionCell.style.fontWeight = 'bold';
+                    } else if (step.action.includes('接受')) {
+                        actionCell.style.color = '#27ae60';
+                        actionCell.style.fontWeight = 'bold';
+                    } else if (step.action.includes('错误')) {
+                        actionCell.style.color = '#c0392b';
+                        actionCell.style.fontWeight = 'bold';
+                    }
+                    tr.appendChild(actionCell);
+                    
+                    parseSteps.appendChild(tr);
+                });
+                
+                // 存储当前分析状态
+                currentParse = {
+                    tokens: inputString.value.trim().split(/\s+/),
+                    steps: result.steps,
+                    currentStep: 1,
+                    stepCount: result.steps.length,
+                    isCompleted: false,
+                    isSuccess: result.success
+                };
+            }
+            
+            // 执行单步分析
+            stepBtn.addEventListener('click', () => {
+                if (currentParse.isCompleted) {
+                    return;
+                }
+                
+                const step = currentParse.steps[currentParse.currentStep];
+                
+                // 更新解析状态
+                stateStack.textContent = step.stack.split(' ').filter(s => !isNaN(s)).join(' ');
+                symbolStack.textContent = step.stack.split(' ').filter(s => isNaN(s)).join(' ');
+                inputStack.textContent = step.input;
+                
+                // 更新分析步骤表格
+                const rows = parseSteps.querySelectorAll('tr');
+                if (rows.length > currentParse.currentStep) {
+                    rows[currentParse.currentStep].style.backgroundColor = '#e6f7ff';
+                }
+                
+                // 准备下一步
+                currentParse.currentStep++;
+                
+                // 检查是否完成
+                if (currentParse.currentStep >= currentParse.stepCount) {
+                    currentParse.isCompleted = true;
+                    stepBtn.disabled = true;
+                }
+            });
+            
+            // 自动分析
+            autoBtn.addEventListener('click', () => {
+                if (currentParse.isCompleted) {
+                    return;
+                }
+                
+                stepBtn.disabled = true;
+                autoBtn.disabled = true;
+                
+                const delay = parseInt(stepDelay.value);
+                
+                function runStep() {
+                    if (currentParse.isCompleted) {
+                        return;
+                    }
+                    
+                    const step = currentParse.steps[currentParse.currentStep];
+                    
+                    // 更新解析状态
+                    stateStack.textContent = step.stack.split(' ').filter(s => !isNaN(s)).join(' ');
+                    symbolStack.textContent = step.stack.split(' ').filter(s => isNaN(s)).join(' ');
+                    inputStack.textContent = step.input;
+                    
+                    // 更新分析步骤表格
+                    const rows = parseSteps.querySelectorAll('tr');
+                    if (rows.length > currentParse.currentStep) {
+                        rows[currentParse.currentStep].style.backgroundColor = '#e6f7ff';
+                    }
+                    
+                    // 准备下一步
+                    currentParse.currentStep++;
+                    
+                    // 检查是否完成
+                    if (currentParse.currentStep >= currentParse.stepCount) {
+                        currentParse.isCompleted = true;
+                    } else {
+                        setTimeout(runStep, delay);
+                    }
+                }
+                
+                runStep();
+            });
+            
+            // 初始加载示例文法
+            exampleBtn.click();
+        });
+    </script>
+</body>
+</html>
