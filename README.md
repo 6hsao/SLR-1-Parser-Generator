@@ -14,3 +14,5 @@ OS: Windows_NT x64 10.0.22631
 扩展下载：
 1.(HTML/CSS/JavaScript) 
 2.Live Server (for demonstration)
+
+<img width="710" height="350" alt="image" src="https://github.com/user-attachments/assets/eb7f65e1-4bb6-4e9b-a0fe-98629dc3d45c" />
