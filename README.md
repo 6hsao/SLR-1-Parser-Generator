@@ -9,6 +9,8 @@ Node.js: 22.17.0
 V8: 13.8.500258-electron.0
 OS: Windows_NT x64 10.0.22631
 
-扩展下载
+要求：1.103.0版本及以上
+
+扩展下载：
 1.(HTML/CSS/JavaScript) 
 2.Live Server (for demonstration)
